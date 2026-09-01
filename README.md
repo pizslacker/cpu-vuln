@@ -7,7 +7,7 @@ C command-line program that parses the Linux kernel's `sysfs` vulnerability dire
 make
 ```
 
-### Remove
+### Clean up:
 ```bash
 make clean
 ```
