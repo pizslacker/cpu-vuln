@@ -4,5 +4,10 @@ C command-line program that parses the Linux kernel's `sysfs` vulnerability dire
 
 ### Compile:
 ```bash
-gcc -O2 cpu-vuln.c -o cpu-vuln
+make
+```
+
+### Clean up:
+```bash
+make clean
 ```
