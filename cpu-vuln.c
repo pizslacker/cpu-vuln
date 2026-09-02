@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define IA32_SPEC_CTRL_MSR 0x48
 
 #define VULN_DIR "/sys/devices/system/cpu/vulnerabilities"
 #define CPUINFO_FILE "/proc/cpuinfo"
@@ -60,10 +65,41 @@ int main() {
     char path[512];
     char buffer[1024];
 
-    // 1. Print CPU Information
+    // Print CPU Information
     print_cpu_info();
 
-    // 2. Open and parse vulnerabilities directory
+    // The msr driver maps the file offset directly to the MSR register index
+    printf(COLOR_BOLD COLOR_CYAN "=== CPU Hardware Mitigations ===\n" COLOR_RESET);
+    int fd = open("/dev/cpu/0/msr", O_RDONLY);
+    if (fd < 0) {
+        perror("Failed to open /dev/cpu/0/msr\n(Tip: Run with sudo and ensure 'modprobe msr' is loaded)");
+        return 1;
+    }
+
+    uint64_t spec_ctrl = 0;
+    
+    // Read 8 bytes (64-bit MSR) using the MSR address as the file offset
+    if (pread(fd, &spec_ctrl, sizeof(spec_ctrl), IA32_SPEC_CTRL_MSR) != sizeof(spec_ctrl)) {
+        perror("Failed to read IA32_SPEC_CTRL MSR");
+        close(fd);
+        return 1;
+    }
+    
+    close(fd);
+
+    // Isolate active control bits
+    int ibrs_active  = (spec_ctrl & (1ULL << 0)) != 0; // Bit 0: Indirect Branch Restricted Speculation
+    int stibp_active = (spec_ctrl & (1ULL << 1)) != 0; // Bit 1: Single Thread Indirect Branch Predictors
+    int ssbd_active  = (spec_ctrl & (1ULL << 2)) != 0; // Bit 2: Speculative Store Bypass Disable
+
+    printf("IA32_SPEC_CTRL (0x48) Raw Value: 0x%016lx\n", spec_ctrl);
+    printf("----------------------------------------\n");
+    printf("  IBRS Active  : %s\n", ibrs_active ? "Yes" : "No");
+    printf("  STIBP Active : %s\n", stibp_active ? "Yes" : "No");
+    printf("  SSBD Active  : %s\n", ssbd_active ? "Yes" : "No");
+    printf("\n");
+
+    // Open and parse vulnerabilities directory
     dir = opendir(VULN_DIR);
     if (dir == NULL) {
         fprintf(stderr, COLOR_RED "Error:" COLOR_RESET " Could not open %s. Are you on a modern Linux kernel?\n", VULN_DIR);
