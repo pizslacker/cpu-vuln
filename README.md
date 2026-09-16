@@ -1,6 +1,6 @@
 # cpu-vuln
 
-C command-line program that runs some `inline assembly` to retrieve the `msr` from the CPU, listing hardware mitigations.
+C command-line program that runs some `inline assembly` to retrieve the [`msr`](https://en.wikipedia.org/wiki/Model-specific_register) from the CPU, listing hardware mitigations.
 Then, it parses the Linux kernel's `sysfs` vulnerability directory and uses ANSI escape sequences to color-code the results.
 
 ### Compile:
